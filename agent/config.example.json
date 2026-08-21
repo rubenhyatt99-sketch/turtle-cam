@@ -31,6 +31,14 @@
     "ignoreNightVisionSwitch": true
   },
 
+  "storage": {
+    "_comment": "mode \"local\" : tout reste sur cette machine, avec un visualiseur sur http://<ip>:8080. mode \"drive\" : envoi vers Google Drive, seul mode lisible par le portail Vercel.",
+    "mode": "local",
+    "localDir": "./data",
+    "serverEnabled": true,
+    "serverPort": 8080
+  },
+
   "drive": {
     "rootFolderId": "REMPLACER_PAR_ID_DOSSIER_DRIVE",
     "serviceAccountFile": "./service-account.json",

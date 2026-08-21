@@ -3,10 +3,12 @@ import { unlink } from "node:fs/promises";
 import { mjpegStream, rtspUrl, snapshot } from "./camera.js";
 import { BehaviorTracker, localDay } from "./behavior.js";
 import { VERSION, loadConfig, loadZones } from "./config.js";
-import { DriveStore, encodeZones } from "./drive.js";
+import { encodeZones } from "./drive.js";
 import { createLogger } from "./logger.js";
 import { MotionDetector } from "./motion.js";
 import { Recorder } from "./recorder.js";
+import { startLocalServer } from "./server.js";
+import { createStore } from "./storage.js";
 import { buildMask, zoneAt } from "./zones.js";
 
 /**
@@ -28,8 +30,7 @@ async function main() {
     process.exit((await runCheck(config, zones)) ? 0 : 1);
   }
 
-  const drive = new DriveStore({ config, logger: log });
-  await drive.init();
+  const store = await createStore({ config, logger: log });
 
   const recorder = new Recorder({ config, rtsp: rtspUrl(config.camera), logger: log });
   recorder.start();
@@ -80,7 +81,7 @@ async function main() {
     let thumbPath = null;
     try {
       thumbPath = await recorder.thumbnail(built.path, built.durationMs);
-      const uploaded = await drive.upload("thumbs", thumbPath, {
+      const uploaded = await store.upload("thumbs", thumbPath, {
         name: `thumb-${clipStart}.jpg`,
         mimeType: "image/jpeg",
       });
@@ -91,7 +92,7 @@ async function main() {
 
     const day = localDay(clipStart, config.behavior.timezone);
     const stamp = new Date(clipStart).toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const uploaded = await drive.upload("clips", built.path, {
+    const uploaded = await store.upload("clips", built.path, {
       name: `${stamp}.mp4`,
       mimeType: "video/mp4",
       appProperties: {
@@ -208,7 +209,7 @@ async function main() {
   timers.push(
     setInterval(async () => {
       try {
-        await drive.putLiveSnapshot(await snapshot(config.camera));
+        await store.putLiveSnapshot(await snapshot(config.camera));
       } catch (error) {
         log.debug(`image live non publiée : ${error.message}`);
       }
@@ -220,12 +221,12 @@ async function main() {
       try {
         const finished = tracker.rolloverIfNeeded(Date.now());
         if (finished) {
-          await drive.putJson(`daily-${finished.day}.json`, finished, { kind: "daily", day: finished.day });
+          await store.putJson(`daily-${finished.day}.json`, finished, { kind: "daily", day: finished.day });
           log.info(`Journée ${finished.day} clôturée : ${finished.events.length} événements`);
         }
         if (state.summaryDirty || !finished) {
           const summary = tracker.serialize();
-          await drive.putJson(`daily-${summary.day}.json`, summary, { kind: "daily", day: summary.day });
+          await store.putJson(`daily-${summary.day}.json`, summary, { kind: "daily", day: summary.day });
           state.summaryDirty = false;
         }
       } catch (error) {
@@ -234,24 +235,31 @@ async function main() {
     }, 60_000),
   );
 
+  const snapshotStatus = () => ({
+    updatedAt: new Date().toISOString(),
+    cameraOnline: state.cameraOnline,
+    recording: state.recording,
+    lastMotionAt: state.lastMotionMs ? new Date(state.lastMotionMs).toISOString() : null,
+    version: VERSION,
+    storageBytes: state.usage.bytes,
+    clipCount: state.usage.count,
+    error: state.lastError,
+  });
+
   timers.push(
     setInterval(async () => {
       try {
-        await drive.putJson("status.json", {
-          updatedAt: new Date().toISOString(),
-          cameraOnline: state.cameraOnline,
-          recording: state.recording,
-          lastMotionAt: state.lastMotionMs ? new Date(state.lastMotionMs).toISOString() : null,
-          version: VERSION,
-          storageBytes: state.usage.bytes,
-          clipCount: state.usage.count,
-          error: state.lastError,
-        });
+        await store.putJson("status.json", snapshotStatus());
       } catch (error) {
         log.warn(`statut non publié : ${error.message}`);
       }
     }, config.drive.statusIntervalSec * 1000),
   );
+
+  const localServer =
+    config.storage.mode === "local" && config.storage.serverEnabled
+      ? startLocalServer({ store, config, logger: log, status: snapshotStatus })
+      : null;
 
   timers.push(
     setInterval(() => {
@@ -262,8 +270,8 @@ async function main() {
 
   const rotate = async () => {
     try {
-      await drive.rotate(config.drive.retentionDays, config.drive.summaryRetentionDays);
-      state.usage = await drive.usage();
+      await store.rotate(config.drive.retentionDays, config.drive.summaryRetentionDays);
+      state.usage = await store.usage();
     } catch (error) {
       log.warn(`rotation impossible : ${error.message}`);
     }
@@ -271,15 +279,18 @@ async function main() {
   timers.push(setInterval(rotate, 3600_000));
   await rotate();
 
-  log.info(`Agent Turtle Cam ${VERSION} démarré (caméra ${config.camera.host})`);
+  log.info(
+    `Agent Turtle Cam ${VERSION} démarré (caméra ${config.camera.host}, stockage ${config.storage.mode})`,
+  );
 
   const shutdown = async () => {
     log.info("Arrêt en cours…");
     for (const timer of timers) clearInterval(timer);
     state.stream?.stop?.();
     recorder.stop();
+    localServer?.close();
     try {
-      await drive.putJson(`daily-${tracker.summary.day}.json`, tracker.serialize(), { kind: "daily" });
+      await store.putJson(`daily-${tracker.summary.day}.json`, tracker.serialize(), { kind: "daily" });
     } catch {
       /* l'agent s'arrête : on ne bloque pas sur Drive */
     }
@@ -308,13 +319,13 @@ async function runCheck(config, zones) {
     results.push(["caméra (snapshot)", false, error.message]);
   }
 
+  const label = config.storage.mode === "drive" ? "Google Drive" : "stockage local";
   try {
-    const drive = new DriveStore({ config, logger: { info() {}, warn() {}, error() {} } });
-    await drive.init();
-    const usage = await drive.usage();
-    results.push(["Google Drive", true, `${usage.count} clips déjà stockés`]);
+    const store = await createStore({ config, logger: { info() {}, warn() {}, error() {} } });
+    const usage = await store.usage();
+    results.push([label, true, `${usage.count} clips déjà stockés`]);
   } catch (error) {
-    results.push(["Google Drive", false, error.message]);
+    results.push([label, false, error.message]);
   }
 
   results.push(["zones", zones.length > 0, `${zones.length} zone(s) définie(s)`]);

@@ -30,7 +30,15 @@ Dans l'interface web de la caméra (`http://<ip-camera>/`) :
 
 ---
 
-## 2. Google Drive
+## 2. Google Drive — *optionnel au début*
+
+> **Vous pouvez sauter cette étape.** L'agent démarre en mode `local` : il
+> enregistre sur le disque de la machine et expose un visualiseur sur votre
+> réseau. C'est la bonne façon de valider caméra, détection et zones avant
+> d'ajouter le cloud. Passez directement à l'étape 3, et revenez ici quand vous
+> voudrez consulter la tortue depuis l'extérieur.
+> Détails : [« Démarrer sans Google Drive »](#démarrer-sans-google-drive).
+
 
 1. Sur [console.cloud.google.com](https://console.cloud.google.com) : créez un
    projet, puis activez **Google Drive API**.
@@ -67,8 +75,9 @@ cp zones.example.json  zones.json
 cp ~/Téléchargements/service-account.json ./service-account.json
 ```
 
-Éditez `config.json` : `camera.host`, `camera.username`, `camera.password`,
-`drive.rootFolderId`. Puis vérifiez que tout répond :
+Éditez `config.json` : `camera.host`, `camera.username`, `camera.password`.
+En mode `local` (le défaut) il n'y a rien d'autre à renseigner. Puis vérifiez
+que tout répond :
 
 ```bash
 npm run check
@@ -77,7 +86,7 @@ npm run check
 ```
 ✅ ffmpeg               ffmpeg version 6.1.1
 ✅ caméra (snapshot)    38 Ko reçus
-✅ Google Drive         0 clips déjà stockés
+✅ stockage local       0 clips déjà stockés
 ✅ zones                4 zone(s) définie(s)
 ```
 
@@ -89,6 +98,38 @@ sudo cp turtle-cam-agent.service /etc/systemd/system/
 sudo systemctl enable --now turtle-cam-agent    # puis en service
 journalctl -u turtle-cam-agent -f
 ```
+
+### Démarrer sans Google Drive
+
+C'est le mode par défaut, réglé dans `config.json` :
+
+```json
+"storage": {
+  "mode": "local",
+  "localDir": "./data",
+  "serverEnabled": true,
+  "serverPort": 8080
+}
+```
+
+L'agent écrit alors dans `agent/data/` — clips, vignettes, résumés quotidiens,
+image live — avec la **même rotation à 7 jours** qu'avec Drive, et sert un
+visualiseur sur `http://<ip-de-la-machine>:8080` : image en quasi direct, liste
+des clips, lecture vidéo, repas et heure de sortie du jour.
+
+⚠️ Ce visualiseur **n'a aucune authentification**. Il est prévu pour un réseau
+domestique. Ne le rendez pas accessible depuis Internet par une redirection de
+port : pour un accès extérieur, c'est le portail Vercel qu'il faut utiliser,
+avec son mot de passe.
+
+Pour basculer sur Drive plus tard, il suffit de renseigner l'étape 2 puis :
+
+```json
+"storage": { "mode": "drive" }
+```
+
+Les clips déjà présents dans `agent/data/` ne sont pas transférés — seuls les
+nouveaux partent sur Drive.
 
 ### Régler les zones
 
@@ -171,3 +212,4 @@ compromis, il ne peut rien supprimer.
 | `No Next.js version detected` au build | un « Root Directory » est configuré dans Vercel : videz le champ |
 | Timeline vide alors que Drive se remplit | vérifier que le dossier racine est bien partagé avec **les deux** comptes de service |
 | Analyse v2 vide | `zones.json` absent ou polygones hors cadre |
+| Visualiseur local injoignable | `serverEnabled` à `false`, ou pare-feu sur le port 8080 |

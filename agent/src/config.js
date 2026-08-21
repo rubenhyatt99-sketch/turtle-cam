@@ -27,6 +27,14 @@ const DEFAULTS = {
     warmupFrames: 20,
     ignoreNightVisionSwitch: true,
   },
+  storage: {
+    // "local" : tout reste sur cette machine. "drive" : envoi vers Google Drive,
+    // seul mode que le portail Vercel sait lire.
+    mode: "local",
+    localDir: "./data",
+    serverEnabled: true,
+    serverPort: 8080,
+  },
   drive: {
     retentionDays: 7,
     summaryRetentionDays: 365,
@@ -84,14 +92,19 @@ export function loadConfig(argv = process.argv) {
   if (!config.camera?.host) missing.push("camera.host");
   if (!config.camera?.username) missing.push("camera.username");
   if (!config.camera?.password) missing.push("camera.password");
-  if (!config.drive?.rootFolderId || config.drive.rootFolderId.startsWith("REMPLACER")) {
-    missing.push("drive.rootFolderId");
+  if (config.storage.mode === "drive") {
+    if (!config.drive?.rootFolderId || config.drive.rootFolderId.startsWith("REMPLACER")) {
+      missing.push("drive.rootFolderId");
+    }
+  } else if (config.storage.mode !== "local") {
+    missing.push('storage.mode ("local" ou "drive")');
   }
   if (missing.length > 0) {
     throw new Error(`Configuration incomplète : ${missing.join(", ")}`);
   }
 
   config.recording.workDir = agentPath(config.recording.workDir);
+  config.storage.localDir = agentPath(config.storage.localDir);
   config.drive.serviceAccountFile = agentPath(config.drive.serviceAccountFile);
   config.stateDir = agentPath(config.stateDir ?? "./state");
   return config;

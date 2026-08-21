@@ -34,6 +34,11 @@ de mouvement sur Vercel. L'architecture est donc en deux morceaux :
 
 Google Drive est l'unique source de vérité : **pas de base de données à gérer**.
 
+L'agent sait aussi tourner **sans Drive** (`storage.mode: "local"`, le défaut) :
+il enregistre sur son propre disque et expose un visualiseur sur le réseau
+local. Pratique pour valider l'installation avant d'ajouter le cloud — le
+portail Vercel, lui, a besoin de Drive pour avoir quelque chose à afficher.
+
 L'application Next.js vit à la racine du dépôt, et non dans un sous-dossier :
 Vercel la détecte ainsi sans qu'aucun « Root Directory » ne soit à configurer.
 
