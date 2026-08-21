@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+# données locales de l'agent
+agent/recordings/
+agent/state/
+agent/config.json
+agent/zones.json
+agent/service-account.json

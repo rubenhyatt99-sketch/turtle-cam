@@ -1,0 +1,57 @@
+{
+  "camera": {
+    "host": "192.168.1.50",
+    "username": "root",
+    "password": "motdepasse-camera",
+    "protocol": "http",
+    "mjpegPath": "/axis-cgi/mjpg/video.cgi?resolution=320x240&fps=5",
+    "snapshotPath": "/axis-cgi/jpg/image.cgi?resolution=640x480",
+    "rtspPort": 554,
+    "rtspPath": "/axis-media/media.amp?videocodec=h264&resolution=640x480"
+  },
+
+  "recording": {
+    "segmentSec": 15,
+    "ringMinutes": 10,
+    "preRollSec": 6,
+    "postRollSec": 8,
+    "minClipSec": 8,
+    "maxClipSec": 180,
+    "workDir": "./recordings",
+    "ffmpegPath": "ffmpeg"
+  },
+
+  "motion": {
+    "width": 160,
+    "height": 120,
+    "pixelThreshold": 18,
+    "triggerPercent": 1.2,
+    "clearPercent": 0.5,
+    "warmupFrames": 20,
+    "ignoreNightVisionSwitch": true
+  },
+
+  "drive": {
+    "rootFolderId": "REMPLACER_PAR_ID_DOSSIER_DRIVE",
+    "serviceAccountFile": "./service-account.json",
+    "retentionDays": 7,
+    "summaryRetentionDays": 365,
+    "snapshotIntervalSec": 10,
+    "statusIntervalSec": 60
+  },
+
+  "behavior": {
+    "timezone": "Europe/Paris",
+    "homeZone": "maison",
+    "foodZone": "gamelle",
+    "waterZone": "bassin",
+    "baskZone": "lampe",
+    "zoneDebounceSec": 4,
+    "minOutingSec": 45,
+    "minReturnSec": 120,
+    "mealMinSec": 60,
+    "mealCooldownSec": 1800,
+    "bathMinSec": 90,
+    "baskMinSec": 300
+  }
+}

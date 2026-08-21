@@ -1,0 +1,24 @@
+# Service systemd — copier dans /etc/systemd/system/ puis :
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now turtle-cam-agent
+[Unit]
+Description=Turtle Cam — agent de capture et d'analyse
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/turtle-cam/agent
+ExecStart=/usr/bin/node src/index.js
+Environment=NODE_ENV=production
+Environment=TZ=Europe/Paris
+# Les secrets peuvent rester hors de config.json :
+# Environment=CAMERA_PASSWORD=...
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
