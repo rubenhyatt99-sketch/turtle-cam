@@ -19,7 +19,7 @@ de mouvement sur Vercel. L'architecture est donc en deux morceaux :
                                 │  analyse tortue      │                 │ lecture
                                 └──────────────────────┘                 │ (service account)
                                                                 ┌────────▼────────┐
-                                                                │  web/  (Vercel) │
+                                                                │ portail (Vercel)│
                                                                 │  login + portail│
                                                                 └─────────────────┘
 ```
@@ -28,11 +28,14 @@ de mouvement sur Vercel. L'architecture est donc en deux morceaux :
   caméra, détecte le mouvement, enregistre des clips MP4 (ffmpeg), les envoie sur
   Google Drive avec leurs métadonnées, purge ce qui a plus de 7 jours, pousse une
   image "live" toutes les N secondes, et calcule les événements de comportement.
-* **`web/`** — application Next.js déployée sur Vercel. Login / mot de passe,
+* **racine du repo** — application Next.js déployée sur Vercel. Login / mot de passe,
   timeline des clips, lecture vidéo (proxy Drive avec support du Range), vue
   quasi-live, et tableau de bord comportemental.
 
 Google Drive est l'unique source de vérité : **pas de base de données à gérer**.
+
+L'application Next.js vit à la racine du dépôt, et non dans un sous-dossier :
+Vercel la détecte ainsi sans qu'aucun « Root Directory » ne soit à configurer.
 
 ## Démarrage
 

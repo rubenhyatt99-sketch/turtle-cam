@@ -120,15 +120,22 @@ terrarium est organisé autrement.
 
 ## 4. Portail sur Vercel
 
+L'application Next.js est à la racine du dépôt : **laissez le champ « Root
+Directory » vide** dans Vercel. C'est le réglage qui pose le plus souvent
+problème, il n'y a ici rien à y mettre.
+
+Le plus simple est d'importer le dépôt depuis *vercel.com → Add New… →
+Project*, ce qui donne en prime le redéploiement automatique à chaque `git
+push`. En ligne de commande :
+
 ```bash
-cd web
 npm install
 npx vercel            # première fois : lie le projet
 npx vercel --prod
 ```
 
 Variables d'environnement à définir dans *Vercel → Project → Settings →
-Environment Variables* (voir `web/.env.example`) :
+Environment Variables* (voir `.env.example`) :
 
 | Variable | Valeur |
 | --- | --- |
@@ -161,5 +168,6 @@ compromis, il ne peut rien supprimer.
 | Pas d'image en direct | `snapshotPath` incorrect, ou compte caméra sans droit de capture |
 | `ffmpeg arrêté (code 1)` en boucle | mauvais `rtspPath`, ou H.264 désactivé sur la caméra |
 | Clips vides / abandonnés | `recording.ringMinutes` trop court par rapport à `maxClipSec` |
+| `No Next.js version detected` au build | un « Root Directory » est configuré dans Vercel : videz le champ |
 | Timeline vide alors que Drive se remplit | vérifier que le dossier racine est bien partagé avec **les deux** comptes de service |
 | Analyse v2 vide | `zones.json` absent ou polygones hors cadre |

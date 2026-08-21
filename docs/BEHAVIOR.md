@@ -89,7 +89,7 @@ assez avancée pour être comparable :
 | Activité effondrée | moins de 40 % de l'activité attendue au prorata de la journée écoulée |
 
 Ces seuils sont volontairement larges : une alerte qui se déclenche tous les
-jours ne sert à rien. Ils vivent dans `web/lib/insights.ts`, fonction
+jours ne sert à rien. Ils vivent dans `lib/insights.ts`, fonction
 `detectAnomalies`, et se règlent sans toucher à l'agent.
 
 ## Pistes pour la suite
